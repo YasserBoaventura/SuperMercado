@@ -1,19 +1,35 @@
 <?php
-session_start();
-if(isset($_SESSION['user_id'])) { header("Location: dashboard.php"); exit(); }
 require_once 'config/database.php';
-require_once 'config/auth.php';
 
-$database = new Database();
-$db = $database->getConnection();
-$auth = new Auth($db); 
-$error = '';
+if (isset($_SESSION['usuario_id'])) {
+    header('Location: dashboard.php');
+    exit();
+}
 
-if($_SERVER['REQUEST_METHOD'] == 'POST') {
-    if($auth->login($_POST['username'], $_POST['password'])) {
-        header("Location: dashboard.php");
+$erro = '';
+
+if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    $email = $_POST['email'] ?? '';
+    $senha = $_POST['senha'] ?? '';
+    
+    $stmt = $pdo->prepare("SELECT * FROM usuarios WHERE email = ? AND ativo = 1");
+    $stmt->execute([$email]);
+    $usuario = $stmt->fetch();
+    
+    if ($usuario && password_verify($senha, $usuario['senha'])) {
+        $_SESSION['usuario_id'] = $usuario['id'];
+        $_SESSION['usuario_nome'] = $usuario['nome'];
+        $_SESSION['nivel_acesso'] = $usuario['nivel_acesso'];
+        
+        // Registrar log
+        $stmt = $pdo->prepare("INSERT INTO logs (usuario_id, acao, ip_address) VALUES (?, 'login', ?)");
+        $stmt->execute([$usuario['id'], $_SERVER['REMOTE_ADDR']]);
+        
+        header('Location: dashboard.php');
         exit();
-    } else { $error = 'Usuário/senha inválidos!'; }
+    } else {
+        $erro = 'Email ou senha inválidos!';
+    }
 }
 ?>
 <!DOCTYPE html>
@@ -23,44 +39,72 @@ if($_SERVER['REQUEST_METHOD'] == 'POST') {
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Login - Supermercado</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <style>
-        body { background: linear-gradient(135deg, #008080 0%, #20B2AA 100%); height: 100vh; display: flex; align-items: center; justify-content: center; margin: 0; }
-        .login-box { background: white; border-radius: 10px; padding: 25px; width: 100%; max-width: 350px; box-shadow: 0 5px 20px rgba(0,0,0,0.2); }
-        .login-header { text-align: center; margin-bottom: 20px; }
-        .login-header i { font-size: 50px; color: #008080; }
-        .login-header h3 { font-size: 20px; margin-top: 10px; }
-        .form-control { font-size: 14px; padding: 8px 12px; }
-        .btn-login { background: #008080; width: 100%; padding: 8px; font-size: 14px; border: none; }
-        .btn-login:hover { background: #20B2AA; }
+        body {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            height: 100vh;
+            display: flex;
+            align-items: center;
+        }
+        .login-card {
+            border-radius: 15px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.2);
+        }
+        .login-card .card-header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border-radius: 15px 15px 0 0;
+            padding: 20px;
+            text-align: center;
+        }
+        .btn-login {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            border: none;
+            width: 100%;
+            padding: 10px;
+        }
+        .btn-login:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+        }
     </style>
 </head>
 <body>
-    <div class="login-box">
-        <div class="login-header">
-            <i class="fas fa-store"></i>
-            <h3>Sistema Supermercado</h3>
-            <small class="text-muted">Faça login para continuar</small>
-        </div>
-        <?php if($error): ?>
-            <div class="alert alert-danger alert-sm" style="padding: 8px; font-size: 12px;"><?php echo $error; ?></div>
-        <?php endif; ?>
-        <form method="POST">
-            <div class="mb-2">
-                <label class="form-label">Usuário</label>
-                <input type="text" name="username" class="form-control" required autofocus>
+    <div class="container">
+        <div class="row justify-content-center">
+            <div class="col-md-4">
+                <div class="card login-card">
+                    <div class="card-header">
+                        <h3><i class="fas fa-store me-2"></i>Supermercado</h3>
+                        <p class="mb-0">Sistema de Gestão</p>
+                    </div>
+                    <div class="card-body p-4">
+                        <?php if($erro): ?>
+                            <div class="alert alert-danger"><?php echo $erro; ?></div>
+                        <?php endif; ?>
+                        <form method="POST">
+                            <div class="mb-3">
+                                <label class="form-label">Email</label>
+                                <input type="email" name="email" class="form-control" required>
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label">Senha</label>
+                                <input type="password" name="senha" class="form-control" required>
+                            </div>
+                            <button type="submit" class="btn btn-primary btn-login">
+                                <i class="fas fa-sign-in-alt me-2"></i>Entrar
+                            </button>
+                        </form>
+                        <hr>
+                        <div class="text-center">
+                            <small class="text-muted">Demo: admin@supermercado.com / admin123</small><br>
+                            <small class="text-muted">Vendedor: vendedor@supermercado.com / vendedor123</small>
+                        </div>
+                    </div>
+                </div>
             </div>
-            <div class="mb-3">
-                <label class="form-label">Senha</label>
-                <input type="password" name="password" class="form-control" required>
-            </div>
-            <button type="submit" class="btn btn-primary btn-login">Entrar</button>
-        </form>
-        <hr class="my-3">
-        <div class="text-center">
-            <small class="text-muted">admin/admin123 | vendedor/vendedor123</small>
         </div>
     </div>
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
 </body>
 </html>

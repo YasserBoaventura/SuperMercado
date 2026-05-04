@@ -1,10 +1,31 @@
-<?php require_once 'includes/auth_check.php'; require_once 'includes/header.php'; ?>
-<div class="card text-center">
-    <div class="card-body p-5">
-        <i class="fas fa-ban text-danger" style="font-size: 60px;"></i>
-        <h4 class="mt-3">Acesso Negado!</h4>
-        <p>Você não tem permissão para acessar esta página.</p>
-        <a href="dashboard.php" class="btn btn-teal btn-sm">Voltar</a>
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Acesso Negado</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        body {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            height: 100vh;
+            display: flex;
+            align-items: center;
+        }
+    </style>
+</head>
+<body>
+    <div class="container text-center">
+        <div class="card">
+            <div class="card-body p-5">
+                <i class="fas fa-ban fa-5x text-danger mb-3"></i>
+                <h2 class="text-danger">Acesso Negado!</h2>
+                <p>Você não tem permissão para acessar esta página.</p>
+                <a href="dashboard.php" class="btn btn-primary">
+                    <i class="fas fa-home"></i> Voltar ao Dashboard
+                </a>
+            </div>
+        </div>
     </div>
-</div>
-<?php require_once 'includes/footer.php'; ?>
+</body>
+</html>

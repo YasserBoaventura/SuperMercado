@@ -1,123 +1,120 @@
 <?php
-require_once './includes/auth_check.php';
-require_once './includes/header.php';
+require_once '../config/database.php';
+require_once '../includes/auth_check.php';
 
-$produtos = $db->query("SELECT p.*, c.nome as categoria FROM produtos p LEFT JOIN categorias c ON p.categoria_id=c.id ORDER BY p.nome")->fetchAll();
+$page = $_GET['page'] ?? 1;
+$limit = 10;
+$offset = ($page - 1) * $limit;
+
+$search = $_GET['search'] ?? '';
+$where = "status = 'ativo'";
+if($search) {
+    $where .= " AND (nome LIKE '%$search%' OR codigo_barras LIKE '%$search%')";
+}
+
+$total = $pdo->query("SELECT COUNT(*) FROM produtos WHERE $where")->fetchColumn();
+$totalPages = ceil($total / $limit);
+
+$produtos = $pdo->query("
+    SELECT p.*, c.nome as categoria_nome 
+    FROM produtos p
+    LEFT JOIN categorias c ON p.categoria_id = c.id
+    WHERE $where
+    ORDER BY p.nome
+    LIMIT $offset, $limit
+")->fetchAll();
 ?>
-
-<div class="card">
-    <div class="card-header d-flex justify-content-between align-items-center">
-        <span>Produtos</span>
-        <button class="btn btn-light btn-sm" data-bs-toggle="modal" data-bs-target="#modalProduto" onclick="limparForm()">
-            <i class="fas fa-plus"></i> Novo
-        </button>
-    </div>
-    <div class="card-body p-0">
-        <div class="table-responsive">
-            <table class="table table-sm">
-                <thead>
-                    <tr><th>Código</th><th>Produto</th><th>Preço</th><th>Estoque</th><th>Status</th><th style="width:80px"></th></tr>
-                </thead>
-                <tbody>
-                    <?php foreach($produtos as $p): ?>
-                    <tr>
-                        <td><?php echo $p['codigo_barras']; ?></td>
-                        <td><?php echo $p['nome']; ?><br><small class="text-muted"><?php echo $p['categoria']; ?></small></td>
-                        <td>R$ <?php echo number_format($p['preco_venda'],2,',','.'); ?></td>
-                        <td class="<?php echo $p['quantidade_estoque'] <= $p['estoque_minimo'] ? 'text-danger' : ''; ?>"><?php echo $p['quantidade_estoque']; ?></td>
-                        <td><span class="badge bg-<?php echo $p['status']=='ativo'?'success':'secondary'; ?>"><?php echo $p['status']; ?></span></td>
-                        <td>
-                            <button class="btn btn-sm btn-outline-primary" onclick="editarProduto(<?php echo htmlspecialchars(json_encode($p)); ?>)"><i class="fas fa-edit"></i></button>
-                        </td>
-                    </tr>
-                    <?php endforeach; ?>
-                </tbody>
-            </table>
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <title>Produtos - Supermercado</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <link rel="stylesheet" href="../css/custom.css">
+</head>
+<body>
+    <?php include '../includes/header.php'; ?>
+    
+    <div class="col-md-2 sidebar">
+        <div class="nav flex-column">
+            <a class="nav-link" href="../dashboard.php"><i class="fas fa-home"></i> Dashboard</a>
+            <a class="nav-link active" href="listar.php"><i class="fas fa-box"></i> Produtos</a>
+            <a class="nav-link" href="cadastrar.php"><i class="fas fa-plus"></i> Novo Produto</a>
         </div>
     </div>
-</div>
-
-<!-- Modal Produto -->
-<div class="modal fade" id="modalProduto" tabindex="-1" data-bs-backdrop="static">
-    <div class="modal-dialog modal-sm">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title">Produto</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-            </div>
-            <form id="formProduto" method="POST" action="salvar.php">
-                <div class="modal-body">
-                    <input type="hidden" name="id" id="produto_id">
-                    <div class="mb-2">
-                        <label class="form-label">Código Barras</label>
-                        <input type="text" name="codigo_barras" id="codigo_barras" class="form-control form-control-sm" required>
+    
+    <div class="col-md-10 main-content">
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <h2><i class="fas fa-box"></i> Produtos</h2>
+            <a href="cadastrar.php" class="btn btn-success">
+                <i class="fas fa-plus"></i> Novo Produto
+            </a>
+        </div>
+        
+        <div class="card">
+            <div class="card-body">
+                <form method="GET" class="mb-3">
+                    <div class="input-group">
+                        <input type="text" name="search" class="form-control" placeholder="Buscar produto..." value="<?php echo htmlspecialchars($search); ?>">
+                        <button class="btn btn-primary" type="submit">
+                            <i class="fas fa-search"></i> Buscar
+                        </button>
                     </div>
-                    <div class="mb-2">
-                        <label class="form-label">Nome</label>
-                        <input type="text" name="nome" id="nome" class="form-control form-control-sm" required>
-                    </div>
-                    <div class="row">
-                        <div class="col-6 mb-2">
-                            <label class="form-label">Preço Venda</label>
-                            <input type="text" name="preco_venda" id="preco_venda" class="form-control form-control-sm money" required>
-                        </div>
-                        <div class="col-6 mb-2">
-                            <label class="form-label">Estoque</label>
-                            <input type="number" name="quantidade_estoque" id="quantidade_estoque" class="form-control form-control-sm" value="0">
-                        </div>
-                    </div>
-                    <div class="mb-2">
-                        <label class="form-label">Categoria</label>
-                        <select name="categoria_id" id="categoria_id" class="form-select form-select-sm">
-                            <option value="">Selecione</option>
-                            <?php $cats = $db->query("SELECT * FROM categorias ORDER BY nome")->fetchAll(); foreach($cats as $c): ?>
-                            <option value="<?php echo $c['id']; ?>"><?php echo $c['nome']; ?></option>
+                </form>
+                
+                <div class="table-responsive">
+                    <table class="table table-bordered">
+                        <thead class="table-dark">
+                            <tr>
+                                <th>Código</th>
+                                <th>Nome</th>
+                                <th>Categoria</th>
+                                <th>Preço Venda</th>
+                                <th>Estoque</th>
+                                <th>Est. Mínimo</th>
+                                <th>Validade</th>
+                                <th>Ações</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <?php foreach($produtos as $produto): ?>
+                                <tr>
+                                    <td><?php echo htmlspecialchars($produto['codigo_barras']); ?></td>
+                                    <td><?php echo htmlspecialchars($produto['nome']); ?></td>
+                                    <td><?php echo htmlspecialchars($produto['categoria_nome']); ?></td>
+                                    <td>R$ <?php echo number_format($produto['preco_venda'], 2, ',', '.'); ?></td>
+                                    <td class="<?php echo $produto['quantidade'] <= $produto['quantidade_minima'] ? 'text-danger fw-bold' : ''; ?>">
+                                        <?php echo $produto['quantidade']; ?>
+                                    </td>
+                                    <td><?php echo $produto['quantidade_minima']; ?></td>
+                                    <td><?php echo $produto['data_validade'] ? date('d/m/Y', strtotime($produto['data_validade'])) : '-'; ?></td>
+                                    <td class="table-actions">
+                                        <a href="editar.php?id=<?php echo $produto['id']; ?>" class="btn btn-sm btn-primary">
+                                            <i class="fas fa-edit"></i>
+                                        </a>
+                                    </td>
+                                </tr>
                             <?php endforeach; ?>
-                        </select>
-                    </div>
-                    <div class="mb-2">
-                        <label class="form-label">Status</label>
-                        <select name="status" id="status" class="form-select form-select-sm">
-                            <option value="ativo">Ativo</option>
-                            <option value="inativo">Inativo</option>
-                        </select>
-                    </div>
+                        </tbody>
+                    </table>
                 </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Cancelar</button>
-                    <button type="submit" class="btn btn-teal btn-sm">Salvar</button>
-                </div>
-            </form>
+                
+                <?php if($totalPages > 1): ?>
+                <nav>
+                    <ul class="pagination">
+                        <?php for($i = 1; $i <= $totalPages; $i++): ?>
+                            <li class="page-item <?php echo $i == $page ? 'active' : ''; ?>">
+                                <a class="page-link" href="?page=<?php echo $i; ?>&search=<?php echo urlencode($search); ?>"><?php echo $i; ?></a>
+                            </li>
+                        <?php endfor; ?>
+                    </ul>
+                </nav>
+                <?php endif; ?>
+            </div>
         </div>
     </div>
-</div>
-
-<script>
-function limparForm() {
-    document.getElementById('formProduto').reset();
-    document.getElementById('produto_id').value = '';
-    document.getElementById('formProduto').action = 'salvar.php';
-}
-
-function editarProduto(p) {
-    document.getElementById('produto_id').value = p.id;
-    document.getElementById('codigo_barras').value = p.codigo_barras;
-    document.getElementById('nome').value = p.nome;
-    document.getElementById('preco_venda').value = p.preco_venda;
-    document.getElementById('quantidade_estoque').value = p.quantidade_estoque;
-    document.getElementById('categoria_id').value = p.categoria_id;
-    document.getElementById('status').value = p.status;
-    document.getElementById('formProduto').action = 'editar.php';
-    new bootstrap.Modal(document.getElementById('modalProduto')).show();
-}
-
-document.querySelectorAll('.money').forEach(el => {
-    el.addEventListener('input', e => {
-        let v = e.target.value.replace(/\D/g,'');
-        v = (v/100).toFixed(2).replace('.',',');
-        e.target.value = 'R$ ' + v;
-    });
-});
-</script>
-
-<?php require_once '../includes/footer.php'; ?>
+    
+    <?php include '../includes/footer.php'; ?>
+</body>
+</html>

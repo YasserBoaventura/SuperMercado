@@ -1,49 +1,74 @@
-/* Adicionar aos estilos existentes */
-.navbar-brand {
-    font-weight: bold;
-    font-size: 1.5rem;
+body {
+    background-color: #f8f9fa;
 }
 
-.dropdown-menu {
-    border-radius: 10px;
-    box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+.sidebar {
+    min-height: calc(100vh - 56px);
+    background-color: #343a40;
+    padding: 20px 0;
 }
 
-.card {
-    border-radius: 10px;
-    transition: transform 0.3s;
-}
-
-.card:hover {
-    transform: translateY(-5px);
-}
-
-.btn {
-    border-radius: 5px;
+.sidebar .nav-link {
+    color: #fff;
+    padding: 10px 20px;
     transition: all 0.3s;
 }
 
-.btn:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+.sidebar .nav-link:hover {
+    background-color: #495057;
 }
 
-.table th {
-    background-color: #f8f9fa;
-    border-top: none;
+.sidebar .nav-link i {
+    margin-right: 10px;
 }
 
-.badge {
+.main-content {
+    padding: 20px;
+}
+
+.card-stats {
+    border: none;
+    border-radius: 10px;
+    box-shadow: 0 0 20px rgba(0,0,0,0.1);
+    margin-bottom: 20px;
+}
+
+.card-stats .card-body {
+    padding: 20px;
+}
+
+.card-stats h3 {
+    font-size: 2rem;
+    margin-bottom: 0;
+}
+
+.status-badge {
     padding: 5px 10px;
-    font-weight: 500;
+    border-radius: 5px;
+    font-size: 12px;
 }
 
-/* Animações */
-@keyframes fadeIn {
-    from { opacity: 0; transform: translateY(20px); }
-    to { opacity: 1; transform: translateY(0); }
+.status-ativo {
+    background-color: #d4edda;
+    color: #155724;
 }
 
-.card, .alert {
-    animation: fadeIn 0.5s ease-out;
+.status-inativo {
+    background-color: #f8d7da;
+    color: #721c24;
+}
+
+.table-actions i {
+    cursor: pointer;
+    margin: 0 5px;
+}
+
+.table-responsive {
+    overflow-x: auto;
+}
+
+@media (max-width: 768px) {
+    .sidebar {
+        min-height: auto;
+    }
 }
