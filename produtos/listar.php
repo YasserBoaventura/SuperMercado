@@ -2,6 +2,48 @@
 require_once '../config/database.php';
 require_once '../includes/auth_check.php';
 
+// Processar exclusão
+if (isset($_GET['excluir'])) {
+    $id = $_GET['excluir'];
+    
+    try {
+        // Buscar dados do produto para log
+        $stmt = $pdo->prepare("SELECT * FROM produtos WHERE id = ?");
+        $stmt->execute([$id]);
+        $produto_excluir = $stmt->fetch();
+        
+        if ($produto_excluir) {
+            // Verificar se o produto existe em movimentações
+            $check = $pdo->prepare("SELECT COUNT(*) FROM movimentacoes_estoque WHERE produto_id = ?");
+            $check->execute([$id]);
+            $tem_movimentacoes = $check->fetchColumn();
+            
+            if ($tem_movimentacoes > 0) {
+                $_SESSION['erro'] = "Não é possível excluir este produto pois existem movimentações associadas a ele.";
+            } else {
+                // Guardar dados para log
+                $dados_excluidos = json_encode($produto_excluir);
+                
+                // Excluir produto
+                $stmt = $pdo->prepare("DELETE FROM produtos WHERE id = ?");
+                $stmt->execute([$id]);
+                
+                // Log
+                $log = $pdo->prepare("INSERT INTO logs (usuario_id, acao, tabela_afetada, registro_id, dados_anteriores, ip_address) 
+                                      VALUES (?, 'excluir', 'produtos', ?, ?, ?)");
+                $log->execute([$_SESSION['usuario_id'], $id, $dados_excluidos, $_SERVER['REMOTE_ADDR']]);
+                
+                $_SESSION['sucesso'] = "Produto excluído com sucesso!";
+            }
+        }
+    } catch(PDOException $e) {
+        $_SESSION['erro'] = "Erro ao excluir: " . $e->getMessage();
+    }
+    
+    header('Location: listar.php');
+    exit();
+}
+
 $page = $_GET['page'] ?? 1;
 $limit = 10;
 $offset = ($page - 1) * $limit;
@@ -52,6 +94,26 @@ $produtos = $pdo->query("
             </a>
         </div>
         
+        <?php if(isset($_SESSION['sucesso'])): ?>
+            <div class="alert alert-success alert-dismissible fade show" role="alert">
+                <?php 
+                echo $_SESSION['sucesso'];
+                unset($_SESSION['sucesso']);
+                ?>
+                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            </div>
+        <?php endif; ?>
+        
+        <?php if(isset($_SESSION['erro'])): ?>
+            <div class="alert alert-danger alert-dismissible fade show" role="alert">
+                <?php 
+                echo $_SESSION['erro'];
+                unset($_SESSION['erro']);
+                ?>
+                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            </div>
+        <?php endif; ?>
+        
         <div class="card">
             <div class="card-body">
                 <form method="GET" class="mb-3">
@@ -93,8 +155,36 @@ $produtos = $pdo->query("
                                         <a href="editar.php?id=<?php echo $produto['id']; ?>" class="btn btn-sm btn-primary">
                                             <i class="fas fa-edit"></i>
                                         </a>
+                                        <button type="button" class="btn btn-sm btn-danger" data-bs-toggle="modal" data-bs-target="#modalExcluir<?php echo $produto['id']; ?>">
+                                            <i class="fas fa-trash"></i>
+                                        </button>
                                     </td>
                                 </tr>
+                                
+                                <!-- Modal de Confirmação de Exclusão para cada produto -->
+                                <div class="modal fade" id="modalExcluir<?php echo $produto['id']; ?>" tabindex="-1">
+                                    <div class="modal-dialog">
+                                        <div class="modal-content">
+                                            <div class="modal-header">
+                                                <h5 class="modal-title"><i class="fas fa-exclamation-triangle text-danger"></i> Confirmar Exclusão</h5>
+                                                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                                            </div>
+                                            <div class="modal-body">
+                                                <p>Tem certeza que deseja excluir o produto <strong><?php echo htmlspecialchars($produto['nome']); ?></strong>?</p>
+                                                <p class="text-danger"><small>Esta ação não pode ser desfeita!</small></p>
+                                                <?php if($produto['quantidade'] > 0): ?>
+                                                    <p class="text-warning"><small><i class="fas fa-exclamation-circle"></i> Este produto possui <?php echo $produto['quantidade']; ?> unidades em estoque.</small></p>
+                                                <?php endif; ?>
+                                            </div>
+                                            <div class="modal-footer">
+                                                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                                                <a href="?excluir=<?php echo $produto['id']; ?>&page=<?php echo $page; ?>&search=<?php echo urlencode($search); ?>" class="btn btn-danger">
+                                                    <i class="fas fa-trash"></i> Sim, Excluir
+                                                </a>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
                             <?php endforeach; ?>
                         </tbody>
                     </table>
@@ -114,6 +204,8 @@ $produtos = $pdo->query("
             </div>
         </div>
     </div>
+    
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
     
     <?php include '../includes/footer.php'; ?>
 </body>

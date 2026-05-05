@@ -14,13 +14,45 @@ if (!$produto) {
     exit();
 }
 
+// Processar exclusão
+if (isset($_POST['excluir'])) {
+    try {
+        // Guardar dados para log antes de excluir
+        $dados_excluidos = json_encode($produto);
+        
+        // Verificar se o produto existe em movimentações
+        $check = $pdo->prepare("SELECT COUNT(*) FROM movimentacoes WHERE produto_id = ?");
+        $check->execute([$id]);
+        $tem_movimentacoes = $check->fetchColumn();
+        
+        if ($tem_movimentacoes > 0) {
+            $erro = "Não é possível excluir este produto pois existem movimentações associadas a ele.";
+        } else {
+            // Excluir produto
+            $stmt = $pdo->prepare("DELETE FROM produtos WHERE id = ?");
+            $stmt->execute([$id]);
+            
+            // Log
+            $log = $pdo->prepare("INSERT INTO logs (usuario_id, acao, tabela_afetada, registro_id, dados_anteriores, ip_address) 
+                                  VALUES (?, 'excluir', 'produtos', ?, ?, ?)");
+            $log->execute([$_SESSION['usuario_id'], $id, $dados_excluidos, $_SERVER['REMOTE_ADDR']]);
+            
+            $_SESSION['sucesso'] = "Produto excluído com sucesso!";
+            header('Location: listar.php');
+            exit();
+        }
+    } catch(PDOException $e) {
+        $erro = "Erro ao excluir: " . $e->getMessage();
+    }
+}
+
 $categorias = $pdo->query("SELECT * FROM categorias WHERE ativo = 1 ORDER BY nome")->fetchAll();
 $fornecedores = $pdo->query("SELECT * FROM fornecedores WHERE ativo = 1 ORDER BY nome_fantasia")->fetchAll();
 
 $erro = '';
 $sucesso = '';
 
-if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && !isset($_POST['excluir'])) {
     $codigo_barras = $_POST['codigo_barras'];
     $nome = $_POST['nome'];
     $descricao = $_POST['descricao'];
@@ -220,9 +252,36 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     
                     <div class="text-end">
                         <a href="listar.php" class="btn btn-secondary">Cancelar</a>
+                        <button type="button" class="btn btn-danger" data-bs-toggle="modal" data-bs-target="#modalExcluir">
+                            <i class="fas fa-trash"></i> Excluir Produto
+                        </button>
                         <button type="submit" class="btn btn-primary">Atualizar</button>
                     </div>
                 </form>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Modal de Confirmação de Exclusão -->
+    <div class="modal fade" id="modalExcluir" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title"><i class="fas fa-exclamation-triangle text-danger"></i> Confirmar Exclusão</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <p>Tem certeza que deseja excluir o produto <strong><?php echo htmlspecialchars($produto['nome']); ?></strong>?</p>
+                    <p class="text-danger"><small>Esta ação não pode ser desfeita!</small></p>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <form method="POST" style="display: inline;">
+                        <button type="submit" name="excluir" class="btn btn-danger">
+                            <i class="fas fa-trash"></i> Sim, Excluir
+                        </button>
+                    </form>
+                </div>
             </div>
         </div>
     </div>

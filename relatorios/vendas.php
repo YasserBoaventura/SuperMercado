@@ -17,16 +17,67 @@ if($forma_pagamento != 'todos') {
     $where .= " AND v.forma_pagamento = '$forma_pagamento'";
 }
 
-// Dados principais
-$vendas = $pdo->query("
-    SELECT v.*, u.nome as vendedor_nome, c.nome as cliente_nome,
-           (SELECT COUNT(*) FROM itens_venda WHERE venda_id = v.id) as total_itens
+// Buscar vendas com os itens detalhados
+$sql = "
+    SELECT 
+        v.id as venda_id,
+        v.numero_venda,
+        v.data_venda,
+        v.subtotal as venda_subtotal,
+        v.desconto as venda_desconto,
+        v.total as venda_total,
+        v.forma_pagamento,
+        v.status,
+        u.nome as vendedor_nome,
+        c.nome as cliente_nome,
+        iv.id as item_id,
+        iv.produto_id,
+        iv.quantidade,
+        iv.preco_unitario,
+        iv.subtotal as item_subtotal,
+        p.nome as produto_nome,
+        p.unidade_medida
     FROM vendas v
     LEFT JOIN usuarios u ON v.usuario_id = u.id
     LEFT JOIN clientes c ON v.cliente_id = c.id
+    LEFT JOIN itens_venda iv ON v.id = iv.venda_id
+    LEFT JOIN produtos p ON iv.produto_id = p.id
     $where
-    ORDER BY v.data_venda DESC
-")->fetchAll();
+    ORDER BY v.data_venda DESC, v.id, iv.id
+";
+
+$vendas = $pdo->query($sql)->fetchAll();
+
+// Organizar os dados por venda
+$vendas_organizadas = [];
+foreach($vendas as $row) {
+    $venda_id = $row['venda_id'];
+    if(!isset($vendas_organizadas[$venda_id])) {
+        $vendas_organizadas[$venda_id] = [
+            'id' => $row['venda_id'],
+            'numero_venda' => $row['numero_venda'],
+            'data_venda' => $row['data_venda'],
+            'vendedor_nome' => $row['vendedor_nome'],
+            'cliente_nome' => $row['cliente_nome'],
+            'subtotal' => $row['venda_subtotal'],
+            'desconto' => $row['venda_desconto'],
+            'total' => $row['venda_total'],
+            'forma_pagamento' => $row['forma_pagamento'],
+            'status' => $row['status'],
+            'itens' => []
+        ];
+    }
+    
+    if($row['produto_id']) {
+        $vendas_organizadas[$venda_id]['itens'][] = [
+            'produto_nome' => $row['produto_nome'],
+            'quantidade' => $row['quantidade'],
+            'unidade_medida' => $row['unidade_medida'],
+            'preco_unitario' => $row['preco_unitario'],
+            'subtotal' => $row['item_subtotal']
+        ];
+    }
+}
 
 // Totais
 $totais = $pdo->query("
@@ -55,8 +106,10 @@ $vendas_por_dia = $pdo->query("
 $produtos_top = $pdo->query("
     SELECT 
         p.nome,
+        p.unidade_medida,
         SUM(iv.quantidade) as total_vendido,
-        SUM(iv.subtotal) as valor_total
+        SUM(iv.subtotal) as valor_total,
+        AVG(iv.preco_unitario) as preco_medio
     FROM itens_venda iv
     JOIN produtos p ON iv.produto_id = p.id
     JOIN vendas v ON iv.venda_id = v.id
@@ -218,7 +271,7 @@ $produtos_top = $pdo->query("
             </div>
         </div>
         
-        <!-- Lista de Vendas -->
+        <!-- Lista de Vendas - REPETINDO OS DADOS EM CADA LINHA -->
         <div class="card">
             <div class="card-header">
                 <h5>Detalhamento das Vendas</h5>
@@ -232,7 +285,9 @@ $produtos_top = $pdo->query("
                                 <th>Data</th>
                                 <th>Vendedor</th>
                                 <th>Cliente</th>
-                                <th>Itens</th>
+                                <th>Produto</th>
+                                <th>Quantidade</th>
+                                <th>Preço Unitário</th>
                                 <th>Subtotal</th>
                                 <th>Desconto</th>
                                 <th>Total</th>
@@ -241,47 +296,72 @@ $produtos_top = $pdo->query("
                             </tr>
                         </thead>
                         <tbody>
-                            <?php foreach($vendas as $venda): ?>
-                                <tr>
-                                    <td><?php echo $venda['numero_venda']; ?></td>
-                                    <td><?php echo date('d/m/Y H:i', strtotime($venda['data_venda'])); ?></td>
-                                    <td><?php echo htmlspecialchars($venda['vendedor_nome'] ?? 'N/A'); ?></td>
-                                    <td><?php echo htmlspecialchars($venda['cliente_nome'] ?? 'Não identificado'); ?></td>
-                                    <td><?php echo $venda['total_itens']; ?></td>
-                                    <td>R$ <?php echo number_format($venda['subtotal'], 2, ',', '.'); ?></td>
-                                    <td>R$ <?php echo number_format($venda['desconto'], 2, ',', '.'); ?></td>
-                                    <td class="fw-bold">R$ <?php echo number_format($venda['total'], 2, ',', '.'); ?></td>
-                                    <td>
-                                        <span class="badge bg-secondary">
-                                            <?php 
-                                            $formas = [
-                                                'dinheiro' => 'Dinheiro',
-                                                'cartao_credito' => 'Cartão Crédito',
-                                                'cartao_debito' => 'Cartão Débito',
-                                                'pix' => 'PIX',
-                                                'boleto' => 'Boleto'
+                            <?php foreach($vendas_organizadas as $venda): ?>
+                                <?php foreach($venda['itens'] as $item): ?>
+                                    <tr>
+                                        <!-- Repete os dados da venda em CADA linha -->
+                                        <td><?php echo $venda['numero_venda']; ?></td>
+                                        <td><?php echo date('d/m/Y H:i', strtotime($venda['data_venda'])); ?></td>
+                                        <td><?php echo htmlspecialchars($venda['vendedor_nome'] ?? 'Vendedor'); ?></td>
+                                        <td><?php echo htmlspecialchars($venda['cliente_nome'] ?? 'Não identificado'); ?></td>
+                                        
+                                        <!-- Dados do produto -->
+                                        <td><?php echo htmlspecialchars($item['produto_nome']); ?> (<?php echo $item['unidade_medida']; ?>)</td>
+                                        <td class="text-center"><?php echo $item['quantidade']; ?></td>
+                                        <td class="text-end">R$ <?php echo number_format($item['preco_unitario'], 2, ',', '.'); ?></td>
+                                        <td class="text-end">R$ <?php echo number_format($item['subtotal'], 2, ',', '.'); ?></td>
+                                        
+                                        <!-- Dados da venda que se repetem -->
+                                        <td class="text-end">R$ <?php echo number_format($venda['desconto'], 2, ',', '.'); ?></td>
+                                        <td class="fw-bold text-end">R$ <?php echo number_format($venda['total'], 2, ',', '.'); ?></td>
+                                        <td>
+                                            <span class="badge bg-secondary">
+                                                <?php 
+                                                $formas = [
+                                                    'dinheiro' => 'Dinheiro',
+                                                    'cartao_credito' => 'Cartão Crédito',
+                                                    'cartao_debito' => 'Cartão Débito',
+                                                    'pix' => 'PIX',
+                                                    'boleto' => 'Boleto'
+                                                ];
+                                                echo $formas[$venda['forma_pagamento']] ?? $venda['forma_pagamento'];
+                                                ?>
+                                            </span>
+                                        </td>
+                                        <td>
+                                            <?php
+                                            $status_class = [
+                                                'concluida' => 'success',
+                                                'pendente' => 'warning',
+                                                'cancelada' => 'danger'
                                             ];
-                                            echo $formas[$venda['forma_pagamento']] ?? $venda['forma_pagamento'];
                                             ?>
-                                        </span>
-                                    </td>
-                                    <td>
-                                        <?php
-                                        $status_class = [
-                                            'concluida' => 'success',
-                                            'pendente' => 'warning',
-                                            'cancelada' => 'danger'
-                                        ];
-                                        ?>
-                                        <span class="badge bg-<?php echo $status_class[$venda['status']] ?? 'secondary'; ?>">
-                                            <?php echo ucfirst($venda['status']); ?>
-                                        </span>
-                                    </td>
-                                </tr>
+                                            <span class="badge bg-<?php echo $status_class[$venda['status']] ?? 'secondary'; ?>">
+                                                <?php echo ucfirst($venda['status']); ?>
+                                            </span>
+                                        </td>
+                                    </tr>
+                                <?php endforeach; ?>
+                                
+                                <?php if(empty($venda['itens'])): ?>
+                                    <tr>
+                                        <td><?php echo $venda['numero_venda']; ?></td>
+                                        <td><?php echo date('d/m/Y H:i', strtotime($venda['data_venda'])); ?></td>
+                                        <td><?php echo htmlspecialchars($venda['vendedor_nome'] ?? 'Vendedor'); ?></td>
+                                        <td><?php echo htmlspecialchars($venda['cliente_nome'] ?? 'Não identificado'); ?></td>
+                                        <td colspan="3" class="text-center">Nenhum produto encontrado</td>
+                                        <td class="text-end">R$ <?php echo number_format($venda['subtotal'], 2, ',', '.'); ?></td>
+                                        <td class="text-end">R$ <?php echo number_format($venda['desconto'], 2, ',', '.'); ?></td>
+                                        <td class="fw-bold text-end">R$ <?php echo number_format($venda['total'], 2, ',', '.'); ?></td>
+                                        <td><span class="badge bg-secondary"><?php echo $formas[$venda['forma_pagamento']] ?? $venda['forma_pagamento']; ?></span></td>
+                                        <td><span class="badge bg-<?php echo $status_class[$venda['status']] ?? 'secondary'; ?>"><?php echo ucfirst($venda['status']); ?></span></td>
+                                    </tr>
+                                <?php endif; ?>
                             <?php endforeach; ?>
-                            <?php if(empty($vendas)): ?>
+                            
+                            <?php if(empty($vendas_organizadas)): ?>
                                 <tr>
-                                    <td colspan="10" class="text-center">Nenhuma venda encontrada no período</td>
+                                    <td colspan="12" class="text-center">Nenhuma venda encontrada no período</td>
                                 </tr>
                             <?php endif; ?>
                         </tbody>

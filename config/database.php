@@ -12,7 +12,7 @@ try {
 } catch(PDOException $e) {
     die("Erro na conexão: " . $e->getMessage());
 }
-
+ 
 // Iniciar sessão
 if (session_status() === PHP_SESSION_NONE) {
     session_start();

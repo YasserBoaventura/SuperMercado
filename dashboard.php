@@ -60,9 +60,12 @@ $produtosVencimento = $pdo->query("
                 <a class="nav-link" href="relatorios/estoque.php">
                     <i class="fas fa-chart-line"></i> Relatórios
                 </a>
+                 <a class="nav-link" href="movimentacoes/listar.php">
+                    <i class="fas fa-exchange-alt"></i> Movimentações
+                </a>
                 <a class="nav-link" href="logs/visualizar.php">
                     <i class="fas fa-history"></i> Logs
-                </a>
+                </a> 
             <?php endif; ?>
             
             <a class="nav-link" href="vendas/nova_venda.php">
