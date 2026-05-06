@@ -6,36 +6,42 @@ require_once '../includes/auth_check.php';
 if (isset($_GET['excluir'])) {
     $id = $_GET['excluir'];
     
-    try {
+    
         // Buscar dados do produto para log
-        $stmt = $pdo->prepare("SELECT * FROM produtos WHERE id = ?");
-        $stmt->execute([$id]);
-        $produto_excluir = $stmt->fetch();
-        
-        if ($produto_excluir) {
-            // Verificar se o produto existe em movimentações
-            $check = $pdo->prepare("SELECT COUNT(*) FROM movimentacoes_estoque WHERE produto_id = ?");
-            $check->execute([$id]);
-            $tem_movimentacoes = $check->fetchColumn();
-            
-            if ($tem_movimentacoes > 0) {
-                $_SESSION['erro'] = "Não é possível excluir este produto pois existem movimentações associadas a ele.";
-            } else {
-                // Guardar dados para log
-                $dados_excluidos = json_encode($produto_excluir);
-                
-                // Excluir produto
-                $stmt = $pdo->prepare("DELETE FROM produtos WHERE id = ?");
-                $stmt->execute([$id]);
-                
-                // Log
-                $log = $pdo->prepare("INSERT INTO logs (usuario_id, acao, tabela_afetada, registro_id, dados_anteriores, ip_address) 
-                                      VALUES (?, 'excluir', 'produtos', ?, ?, ?)");
-                $log->execute([$_SESSION['usuario_id'], $id, $dados_excluidos, $_SERVER['REMOTE_ADDR']]);
-                
-                $_SESSION['sucesso'] = "Produto excluído com sucesso!";
-            }
+    try {
+    // Buscar produto
+    $stmt = $pdo->prepare("SELECT * FROM produtos WHERE id = ?");
+    $stmt->execute([$id]);
+    $produto_excluir = $stmt->fetch();
+    
+    if ($produto_excluir) {
+
+        // Verificar movimentações
+        $check1 = $pdo->prepare("SELECT COUNT(*) FROM movimentacoes_estoque WHERE produto_id = ?");
+        $check1->execute([$id]);
+        $tem_movimentacoes = $check1->fetchColumn();
+
+        // 🔥 Verificar vendas (ESSENCIAL)
+        $check2 = $pdo->prepare("SELECT COUNT(*) FROM itens_venda WHERE produto_id = ?");
+        $check2->execute([$id]);
+        $tem_vendas = $check2->fetchColumn();
+
+        if ($tem_movimentacoes > 0 || $tem_vendas > 0) {
+
+            // 🚀 Melhor prática: DESATIVAR em vez de apagar
+            $stmt = $pdo->prepare("UPDATE produtos SET status = 'inativo' WHERE id = ?");
+            $stmt->execute([$id]);
+
+            $_SESSION['msg'] = "Produto desativado com sucesso (já possui histórico).";
+
+        } else {
+            // Pode apagar com segurança
+            $stmt = $pdo->prepare("DELETE FROM produtos WHERE id = ?");
+            $stmt->execute([$id]);
+
+            $_SESSION['msg'] = "Produto excluído com sucesso.";
         }
+    }
     } catch(PDOException $e) {
         $_SESSION['erro'] = "Erro ao excluir: " . $e->getMessage();
     }
