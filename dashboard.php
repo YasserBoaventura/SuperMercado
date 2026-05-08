@@ -152,8 +152,8 @@ $produtosVencimento = $pdo->query("
                 </div>
             </div>
         </div>
-        
-        <?php if($_SESSION['nivel_acesso'] == 'vendedor' && count($produtosVencimento) > 0): ?>
+        <?php if($_SESSION['nivel_acesso'] == 'vendedor'  && count($produtosVencimento) > 0): ?>
+  
         <div class="card mt-4">
             <div class="card-header bg-warning text-white">
                 <h5><i class="fas fa-calendar-alt"></i> Produtos Próximos ao Vencimento</h5>

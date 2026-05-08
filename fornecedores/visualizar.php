@@ -157,7 +157,7 @@ $estatisticas = $stats->fetch();
                               </tr>
                           <?php endforeach; ?>
                       </tbody>
-                  20
+                  
                       </div>
                   <?php else: ?>
                       <p class="text-muted text-center">Nenhum produto cadastrado para este fornecedor.</p>
