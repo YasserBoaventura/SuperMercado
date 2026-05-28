@@ -1,4 +1,7 @@
+
+
 <?php
+
 require_once '../config/database.php';
 require_once '../includes/auth_check.php';
 
@@ -100,6 +103,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && !isset($_POST['excluir'])) {
         $erro = "Erro ao atualizar: " . $e->getMessage();
     }
 }
+
 ?>
 <!DOCTYPE html>
 <html lang="pt-br">
@@ -108,186 +112,251 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && !isset($_POST['excluir'])) {
     <title>Editar Produto - Supermercado</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
-    <link rel="stylesheet" href="../css/custom.css">
+    <!-- Nenhum CSS customizado - apenas Bootstrap -->
 </head>
-<body>
-    <?php include '../includes/header.php'; ?>
-    
-    <div class="col-md-2 sidebar">
-        <div class="nav flex-column">
-            <a class="nav-link" href="../dashboard.php"><i class="fas fa-home"></i> Dashboard</a>
-            <a class="nav-link" href="listar.php"><i class="fas fa-box"></i> Produtos</a>
-            <a class="nav-link" href="cadastrar.php"><i class="fas fa-plus"></i> Novo Produto</a>
-            <a class="nav-link active" href="editar.php?id=<?php echo $id; ?>"><i class="fas fa-edit"></i> Editar Produto</a>
-        </div>
-    </div>
-    
-    <div class="col-md-10 main-content">
-        <h2><i class="fas fa-edit"></i> Editar Produto</h2>
-        
-        <?php if($sucesso): ?>
-            <div class="alert alert-success alert-dismissible fade show" role="alert">
-                <?php echo $sucesso; ?>
-                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+<body class="bg-info bg-opacity-10">
+
+    <!-- Header superior -->
+    <nav class="navbar navbar-expand-lg bg-info bg-opacity-25 shadow-sm mb-3">
+        <div class="container-fluid px-4">
+            <a class="navbar-brand fw-bold text-info" href="../dashboard.php">
+                <i class="fas fa-store me-2"></i>Supermercado Gestão
+            </a>
+            <div class="ms-auto d-flex align-items-center gap-3">
+                <span class="text-secondary small">
+                    <i class="fas fa-user-circle me-1 text-info"></i>
+                    <?php echo isset($_SESSION['usuario_nome']) ? htmlspecialchars($_SESSION['usuario_nome']) : 'Usuário'; ?>
+                </span>
+                <span class="badge bg-info bg-opacity-25 text-info px-2 py-1">
+                    <i class="fas fa-tag me-1"></i>
+                    <?php echo isset($_SESSION['nivel_acesso']) ? ucfirst($_SESSION['nivel_acesso']) : 'Admin'; ?>
+                </span>
+                <a href="../logout.php" class="btn btn-outline-info btn-sm">
+                    <i class="fas fa-sign-out-alt"></i> Sair
+                </a>
             </div>
-        <?php endif; ?>
-        
-        <?php if($erro): ?>
-            <div class="alert alert-danger"><?php echo $erro; ?></div>
-        <?php endif; ?>
-        
-        <div class="card">
-            <div class="card-body">
-                <form method="POST">
-                    <div class="row">
-                        <div class="col-md-4">
-                            <div class="mb-3">
-                                <label>Código de Barras</label>
-                                <input type="text" name="codigo_barras" class="form-control" value="<?php echo htmlspecialchars($produto['codigo_barras']); ?>">
-                            </div>
-                        </div>
-                        <div class="col-md-8">
-                            <div class="mb-3">
-                                <label>Nome do Produto *</label>
-                                <input type="text" name="nome" class="form-control" value="<?php echo htmlspecialchars($produto['nome']); ?>" required>
-                            </div>
-                        </div>
-                    </div>
-                    
-                    <div class="mb-3">
-                        <label>Descrição</label>
-                        <textarea name="descricao" class="form-control" rows="3"><?php echo htmlspecialchars($produto['descricao']); ?></textarea>
-                    </div>
-                    
-                    <div class="row">
-                        <div class="col-md-6">
-                            <div class="mb-3">
-                                <label>Categoria *</label>
-                                <select name="categoria_id" class="form-control" required>
-                                    <option value="">Selecione...</option>
-                                    <?php foreach($categorias as $categoria): ?>
-                                        <option value="<?php echo $categoria['id']; ?>" <?php echo $produto['categoria_id'] == $categoria['id'] ? 'selected' : ''; ?>>
-                                            <?php echo htmlspecialchars($categoria['nome']); ?>
-                                        </option>
-                                    <?php endforeach; ?>
-                                </select>
-                            </div>
-                        </div>
-                        <div class="col-md-6">
-                            <div class="mb-3">
-                                <label>Fornecedor</label>
-                                <select name="fornecedor_id" class="form-control">
-                                    <option value="">Selecione...</option>
-                                    <?php foreach($fornecedores as $fornecedor): ?>
-                                        <option value="<?php echo $fornecedor['id']; ?>" <?php echo $produto['fornecedor_id'] == $fornecedor['id'] ? 'selected' : ''; ?>>
-                                            <?php echo htmlspecialchars($fornecedor['nome_fantasia']); ?>
-                                        </option>
-                                    <?php endforeach; ?>
-                                </select>
-                            </div>
+        </div>
+    </nav>
+
+    <div class="container-fluid px-4">
+        <div class="row g-3">
+            
+            <!-- Sidebar -->
+            <div class="col-md-3 col-lg-2">
+                <div class="card border border-info border-opacity-25 rounded-4 shadow-sm sticky-top" style="top: 20px;">
+                    <div class="card-body p-0">
+                        <div class="nav flex-column nav-pills p-3 gap-2">
+                            <a class="nav-link text-secondary rounded-3" href="../dashboard.php">
+                                <i class="fas fa-home me-2 text-info"></i> Dashboard
+                            </a>
+                            <a class="nav-link text-secondary rounded-3" href="listar.php">
+                                <i class="fas fa-box me-2 text-info"></i> Produtos
+                            </a>
+                            <a class="nav-link text-secondary rounded-3" href="cadastrar.php">
+                                <i class="fas fa-plus me-2 text-info"></i> Novo Produto
+                            </a>
+                            <a class="nav-link active bg-info bg-opacity-25 text-info fw-semibold rounded-3" href="editar.php?id=<?php echo isset($id) ? $id : ''; ?>">
+                                <i class="fas fa-edit me-2"></i> Editar Produto
+                            </a>
                         </div>
                     </div>
-                    
-                    <div class="row">
-                        <div class="col-md-3">
-                            <div class="mb-3">
-                                <label>Preço Compra</label>
-                                <input type="text" name="preco_compra" class="form-control money" value="<?php echo number_format($produto['preco_compra'], 2, ',', '.'); ?>" placeholder="0,00">
-                            </div>
-                        </div>
-                        <div class="col-md-3">
-                            <div class="mb-3">
-                                <label>Preço Venda *</label>
-                                <input type="text" name="preco_venda" class="form-control money" value="<?php echo number_format($produto['preco_venda'], 2, ',', '.'); ?>" required placeholder="0,00">
-                            </div>
-                        </div>
-                        <div class="col-md-2">
-                            <div class="mb-3">
-                                <label>Quantidade *</label>
-                                <input type="number" name="quantidade" class="form-control" value="<?php echo $produto['quantidade']; ?>" required>
-                            </div>
-                        </div>
-                        <div class="col-md-2">
-                            <div class="mb-3">
-                                <label>Estoque Mínimo</label>
-                                <input type="number" name="quantidade_minima" class="form-control" value="<?php echo $produto['quantidade_minima']; ?>">
-                            </div>
-                        </div>
-                        <div class="col-md-2">
-                            <div class="mb-3">
-                                <label>Unidade</label>
-                                <select name="unidade_medida" class="form-control">
-                                    <option value="UN" <?php echo $produto['unidade_medida'] == 'UN' ? 'selected' : ''; ?>>Unidade</option>
-                                    <option value="KG" <?php echo $produto['unidade_medida'] == 'KG' ? 'selected' : ''; ?>>Quilograma</option>
-                                    <option value="L" <?php echo $produto['unidade_medida'] == 'L' ? 'selected' : ''; ?>>Litro</option>
-                                    <option value="PCT" <?php echo $produto['unidade_medida'] == 'PCT' ? 'selected' : ''; ?>>Pacote</option>
-                                </select>
-                            </div>
-                        </div>
+                </div>
+            </div>
+            
+            <!-- Main Content -->
+            <div class="col-md-9 col-lg-10">
+                <div class="mb-3">
+                    <h2 class="fw-bold text-info fs-4">
+                        <i class="fas fa-edit me-2"></i> Editar Produto
+                    </h2>
+                    <p class="text-secondary small">Altere as informações do produto</p>
+                </div>
+                
+                <!-- Mensagens de feedback -->
+                <?php if(isset($sucesso) && $sucesso): ?>
+                    <div class="alert alert-success alert-dismissible fade show rounded-3" role="alert">
+                        <i class="fas fa-check-circle me-2"></i> <?php echo $sucesso; ?>
+                        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
                     </div>
-                    
-                    <div class="row">
-                        <div class="col-md-4">
-                            <div class="mb-3">
-                                <label>Data Validade</label>
-                                <input type="date" name="data_validade" class="form-control" value="<?php echo $produto['data_validade']; ?>">
-                            </div>
-                        </div>
-                        <div class="col-md-4">
-                            <div class="mb-3">
-                                <label>Localização</label>
-                                <input type="text" name="localizacao" class="form-control" value="<?php echo htmlspecialchars($produto['localizacao']); ?>" placeholder="Ex: Corredor 1, Prateleira A">
-                            </div>
-                        </div>
-                        <div class="col-md-4">
-                            <div class="mb-3">
-                                <label>Status</label>
-                                <select name="status" class="form-control">
-                                    <option value="ativo" <?php echo $produto['status'] == 'ativo' ? 'selected' : ''; ?>>Ativo</option>
-                                    <option value="inativo" <?php echo $produto['status'] == 'inativo' ? 'selected' : ''; ?>>Inativo</option>
-                                </select>
-                            </div>
-                        </div>
+                <?php endif; ?>
+                
+                <?php if(isset($erro) && $erro): ?>
+                    <div class="alert alert-danger alert-dismissible fade show rounded-3" role="alert">
+                        <i class="fas fa-exclamation-triangle me-2"></i> <?php echo $erro; ?>
+                        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
                     </div>
-                    
-                    <div class="text-end">
-                        <a href="listar.php" class="btn btn-secondary">Cancelar</a>
-                        <button type="button" class="btn btn-danger" data-bs-toggle="modal" data-bs-target="#modalExcluir">
-                            <i class="fas fa-trash"></i> Excluir Produto
-                        </button>
-                        <button type="submit" class="btn btn-primary">Atualizar</button>
+                <?php endif; ?>
+                
+                <!-- Formulário -->
+                <div class="card border border-info border-opacity-25 rounded-3 shadow-sm">
+                    <div class="card-header bg-info bg-opacity-10 border-0 rounded-top-3 py-2">
+                        <h6 class="mb-0 text-info"><i class="fas fa-pencil-alt me-1"></i> Informações do Produto</h6>
                     </div>
-                </form>
+                    <div class="card-body p-3">
+                        <form method="POST">
+                            <div class="row g-2">
+                                <div class="col-md-4">
+                                    <label class="form-label text-secondary small fw-semibold mb-0">Código de Barras</label>
+                                    <input type="text" name="codigo_barras" class="form-control form-control-sm border border-info border-opacity-25 rounded-2" value="<?php echo isset($produto['codigo_barras']) ? htmlspecialchars($produto['codigo_barras']) : ''; ?>">
+                                </div>
+                                <div class="col-md-8">
+                                    <label class="form-label text-secondary small fw-semibold mb-0">Nome do Produto <span class="text-danger">*</span></label>
+                                    <input type="text" name="nome" class="form-control form-control-sm border border-info border-opacity-25 rounded-2" value="<?php echo isset($produto['nome']) ? htmlspecialchars($produto['nome']) : ''; ?>" required>
+                                </div>
+                            </div>
+                            
+                            <div class="mt-2">
+                                <label class="form-label text-secondary small fw-semibold mb-0">Descrição</label>
+                                <textarea name="descricao" class="form-control form-control-sm border border-info border-opacity-25 rounded-2" rows="2"><?php echo isset($produto['descricao']) ? htmlspecialchars($produto['descricao']) : ''; ?></textarea>
+                            </div>
+                            
+                            <div class="row g-2 mt-1">
+                                <div class="col-md-6">
+                                    <label class="form-label text-secondary small fw-semibold mb-0">Categoria <span class="text-danger">*</span></label>
+                                    <select name="categoria_id" class="form-select form-select-sm border border-info border-opacity-25 rounded-2" required>
+                                        <option value="">Selecione...</option>
+                                        <?php if(isset($categorias)): ?>
+                                            <?php foreach($categorias as $categoria): ?>
+                                                <option value="<?php echo $categoria['id']; ?>" <?php echo (isset($produto['categoria_id']) && $produto['categoria_id'] == $categoria['id']) ? 'selected' : ''; ?>>
+                                                    <?php echo htmlspecialchars($categoria['nome']); ?>
+                                                </option>
+                                            <?php endforeach; ?>
+                                        <?php endif; ?>
+                                    </select>
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label text-secondary small fw-semibold mb-0">Fornecedor</label>
+                                    <select name="fornecedor_id" class="form-select form-select-sm border border-info border-opacity-25 rounded-2">
+                                        <option value="">Selecione...</option>
+                                        <?php if(isset($fornecedores)): ?>
+                                            <?php foreach($fornecedores as $fornecedor): ?>
+                                                <option value="<?php echo $fornecedor['id']; ?>" <?php echo (isset($produto['fornecedor_id']) && $produto['fornecedor_id'] == $fornecedor['id']) ? 'selected' : ''; ?>>
+                                                    <?php echo htmlspecialchars($fornecedor['nome_fantasia']); ?>
+                                                </option>
+                                            <?php endforeach; ?>
+                                        <?php endif; ?>
+                                    </select>
+                                </div>
+                            </div>
+                            
+                            <div class="row g-2 mt-1">
+                                <div class="col-md-3">
+                                    <label class="form-label text-secondary small fw-semibold mb-0">Preço Compra</label>
+                                    <div class="input-group input-group-sm">
+                                        <span class="input-group-text bg-light border-info border-opacity-25">R$</span>
+                                        <input type="text" name="preco_compra" class="form-control form-control-sm border-info border-opacity-25 money" value="<?php echo isset($produto['preco_compra']) ? number_format($produto['preco_compra'], 2, ',', '.') : '0,00'; ?>" placeholder="0,00">
+                                    </div>
+                                </div>
+                                <div class="col-md-3">
+                                    <label class="form-label text-secondary small fw-semibold mb-0">Preço Venda <span class="text-danger">*</span></label>
+                                    <div class="input-group input-group-sm">
+                                        <span class="input-group-text bg-light border-info border-opacity-25">R$</span>
+                                        <input type="text" name="preco_venda" class="form-control form-control-sm border-info border-opacity-25 money" value="<?php echo isset($produto['preco_venda']) ? number_format($produto['preco_venda'], 2, ',', '.') : '0,00'; ?>" required placeholder="0,00">
+                                    </div>
+                                </div>
+                                <div class="col-md-2">
+                                    <label class="form-label text-secondary small fw-semibold mb-0">Quantidade <span class="text-danger">*</span></label>
+                                    <input type="number" name="quantidade" class="form-control form-control-sm border border-info border-opacity-25 rounded-2" value="<?php echo isset($produto['quantidade']) ? $produto['quantidade'] : 0; ?>" required>
+                                </div>
+                                <div class="col-md-2">
+                                    <label class="form-label text-secondary small fw-semibold mb-0">Estoque Mínimo</label>
+                                    <input type="number" name="quantidade_minima" class="form-control form-control-sm border border-info border-opacity-25 rounded-2" value="<?php echo isset($produto['quantidade_minima']) ? $produto['quantidade_minima'] : 0; ?>">
+                                </div>
+                                <div class="col-md-2">
+                                    <label class="form-label text-secondary small fw-semibold mb-0">Unidade</label>
+                                    <select name="unidade_medida" class="form-select form-select-sm border border-info border-opacity-25 rounded-2">
+                                        <option value="UN" <?php echo (isset($produto['unidade_medida']) && $produto['unidade_medida'] == 'UN') ? 'selected' : ''; ?>>Unidade</option>
+                                        <option value="KG" <?php echo (isset($produto['unidade_medida']) && $produto['unidade_medida'] == 'KG') ? 'selected' : ''; ?>>Quilograma</option>
+                                        <option value="L" <?php echo (isset($produto['unidade_medida']) && $produto['unidade_medida'] == 'L') ? 'selected' : ''; ?>>Litro</option>
+                                        <option value="PCT" <?php echo (isset($produto['unidade_medida']) && $produto['unidade_medida'] == 'PCT') ? 'selected' : ''; ?>>Pacote</option>
+                                    </select>
+                                </div>
+                            </div>
+                            
+                            <div class="row g-2 mt-1">
+                                <div class="col-md-4">
+                                    <label class="form-label text-secondary small fw-semibold mb-0">Data Validade</label>
+                                    <input type="date" name="data_validade" class="form-control form-control-sm border border-info border-opacity-25 rounded-2" value="<?php echo isset($produto['data_validade']) ? $produto['data_validade'] : ''; ?>">
+                                </div>
+                                <div class="col-md-4">
+                                    <label class="form-label text-secondary small fw-semibold mb-0">Localização</label>
+                                    <input type="text" name="localizacao" class="form-control form-control-sm border border-info border-opacity-25 rounded-2" value="<?php echo isset($produto['localizacao']) ? htmlspecialchars($produto['localizacao']) : ''; ?>" placeholder="Ex: Corredor 1">
+                                </div>
+                                <div class="col-md-4">
+                                    <label class="form-label text-secondary small fw-semibold mb-0">Status</label>
+                                    <select name="status" class="form-select form-select-sm border border-info border-opacity-25 rounded-2">
+                                        <option value="ativo" <?php echo (isset($produto['status']) && $produto['status'] == 'ativo') ? 'selected' : ''; ?>>Ativo</option>
+                                        <option value="inativo" <?php echo (isset($produto['status']) && $produto['status'] == 'inativo') ? 'selected' : ''; ?>>Inativo</option>
+                                    </select>
+                                </div>
+                            </div>
+                            
+                            <hr class="my-3">
+                            
+                            <div class="d-flex justify-content-end gap-2">
+                                <a href="listar.php" class="btn btn-outline-secondary btn-sm rounded-2">
+                                    <i class="fas fa-times me-1"></i> Cancelar
+                                </a>
+                                <button type="button" class="btn btn-outline-danger btn-sm rounded-2" data-bs-toggle="modal" data-bs-target="#modalExcluir">
+                                    <i class="fas fa-trash-alt me-1"></i> Excluir
+                                </button>
+                                <button type="submit" class="btn btn-info text-white btn-sm rounded-2">
+                                    <i class="fas fa-save me-1"></i> Atualizar
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+                
+                <!-- Rodapé -->
+                <footer class="mt-3 pt-2 border-top border-info border-opacity-25">
+                    <div class="text-center text-secondary small">
+                        <i class="fas fa-store me-1 text-info"></i> Sistema de Gestão Supermercado &copy; <?php echo date('Y'); ?>
+                    </div>
+                </footer>
             </div>
         </div>
     </div>
     
     <!-- Modal de Confirmação de Exclusão -->
     <div class="modal fade" id="modalExcluir" tabindex="-1">
-        <div class="modal-dialog">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h5 class="modal-title"><i class="fas fa-exclamation-triangle text-danger"></i> Confirmar Exclusão</h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content rounded-4 border border-info border-opacity-25">
+                <div class="modal-header bg-info bg-opacity-25 border-0 rounded-top-4 py-2">
+                    <h6 class="modal-title text-info">
+                        <i class="fas fa-exclamation-triangle me-2"></i> Confirmar Exclusão
+                    </h6>
+                    <button type="button" class="btn-close btn-sm" data-bs-dismiss="modal"></button>
                 </div>
-                <div class="modal-body">
-                    <p>Tem certeza que deseja excluir o produto <strong><?php echo htmlspecialchars($produto['nome']); ?></strong>?</p>
-                    <p class="text-danger"><small>Esta ação não pode ser desfeita!</small></p>
+                <div class="modal-body py-3">
+                    <p class="mb-2 small">Tem certeza que deseja excluir o produto <strong class="text-info"><?php echo isset($produto['nome']) ? htmlspecialchars($produto['nome']) : ''; ?></strong>?</p>
+                    <p class="text-danger small mb-0"><i class="fas fa-ban me-1"></i> Esta ação não pode ser desfeita!</p>
                 </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                <div class="modal-footer bg-light rounded-bottom-4 py-2">
+                    <button type="button" class="btn btn-outline-secondary btn-sm rounded-2" data-bs-dismiss="modal">Cancelar</button>
                     <form method="POST" style="display: inline;">
-                        <button type="submit" name="excluir" class="btn btn-danger">
-                            <i class="fas fa-trash"></i> Sim, Excluir
+                        <button type="submit" name="excluir" class="btn btn-danger btn-sm rounded-2">
+                            <i class="fas fa-trash-alt me-1"></i> Sim, Excluir
                         </button>
                     </form>
                 </div>
             </div>
         </div>
     </div>
-    
+
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
-    <script src="../js/main.js"></script>
+    <script>
+        // Simples máscara para campos de dinheiro
+        $(document).ready(function() {
+            $('.money').on('input', function() {
+                let value = this.value.replace(/[^0-9,]/g, '');
+                if (value.indexOf(',') === -1) {
+                    value = value.replace(/([0-9]+)([0-9]{2})$/, '$1,$2');
+                }
+                this.value = value;
+            });
+        });
+    </script>
 </body>
 </html>
